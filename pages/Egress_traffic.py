@@ -1,7 +1,6 @@
-import urllib.request
-
+import requests
 import streamlit as st
 
-external_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+external_ip = requests.get('https://ident.me').text
 
 st.text(f"Egress IP: {external_ip}")

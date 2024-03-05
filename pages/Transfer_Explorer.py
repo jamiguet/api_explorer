@@ -1,10 +1,9 @@
 import copy
 import datetime
 import pandas as pd
-
 import streamlit as st
 from util import call, plot_transfer_count, load_pump_data, get_field_set, get_field_filtered_list, to_unix, \
-    plot_candles, plot_series
+    plot_candles, plot_series, annotate_symbol
 from io import StringIO
 import ccxt
 from ccxt.kucoin import BadSymbol
@@ -27,8 +26,15 @@ binance = ccxt.binance({
     },
 })
 
+okx = ccxt.okx({
+    'apiKey': st.secrets.OKX_API_KEY,
+    'secret': st.secrets.OKX_API_SECRET,
+    'enableRateLimit': True
+})
+
 kucoin.load_markets()
 binance.load_markets()
+okx.load_markets()
 
 ku_markets = list(
     set(map(lambda symbol: symbol.split('/')[0],
@@ -38,10 +44,8 @@ binance_markets = list(
     set(map(lambda symbol: symbol.split('/')[0],
             filter(lambda symbol: 'USDT' in symbol, binance.symbols))))
 
-st.text(f"Kucoin: {ku_markets}")
-st.text(f"Binanace: {binance_markets}")
 
-st.title("Assets Per Exchange")
+okx_markets = list(set(filter(lambda symbol: 'USDT' in symbol, okx.symbols)))
 
 pumped_coins = load_pump_data(db)
 
@@ -49,16 +53,10 @@ assets = call("https://api.glassnode.com/v1/metrics/assets")
 field_set = list(set([item for sublist in get_field_set('tags', assets) for item in sublist]))
 tag = st.sidebar.selectbox("Asset tags", field_set)
 
-
-def annotate_symbol(symbol, pump, ku_symbols, bi_symbols):
-    return (f'{symbol} {" ⛽" if symbol in pump else ""} '
-            f'({"B" if symbol in bi_symbols else ""}{"K" if symbol in ku_symbols else ""})')
-
-
 filtered_assets = get_field_filtered_list('symbol', tag, assets)
-filtered_assets = list(filter(lambda symbol: symbol in ku_markets or symbol in binance_markets, filtered_assets))
+filtered_assets = list(filter(lambda symbol: symbol in ku_markets or symbol in binance_markets or symbol in okx_markets, filtered_assets))
 filtered_assets = list(
-    map(lambda symbol: annotate_symbol(symbol, pumped_coins, ku_markets, binance_markets), filtered_assets))
+    map(lambda symbol: annotate_symbol(symbol, pumped_coins, ku_markets, binance_markets, okx_markets), filtered_assets))
 current_asset = st.sidebar.selectbox(f"Assets ({len(filtered_assets)})", filtered_assets).split(' ')[0]
 
 start = st.sidebar.date_input('Start Date', datetime.date.today() - datetime.timedelta(days=60))
@@ -69,6 +67,8 @@ kucoin_res = {
     '24h': '1d'
 }
 resolution = st.sidebar.selectbox("Time resolution:", list(kucoin_res.keys()))
+
+st.title("Transfer explorer")
 
 params = {
     'a': current_asset,
@@ -89,15 +89,16 @@ transfer_in = call("https://api.glassnode.com/v1/metrics/addresses/receiving_cou
 
 plot_transfer_count(transfer_in, transfer_out, 'Address transfer', 'Address count')
 
-exchange_out = call("https://api.glassnode.com/v1/metrics/addresses/sending_to_exchanges_count",
-                    params=params,
-                    as_text=True)
+if tag != 'defi':
+    exchange_out = call("https://api.glassnode.com/v1/metrics/addresses/sending_to_exchanges_count",
+                        params=params,
+                        as_text=True)
 
-exchange_in = call("https://api.glassnode.com/v1/metrics/addresses/receiving_from_exchanges_count",
-                   params=params,
-                   as_text=True)
+    exchange_in = call("https://api.glassnode.com/v1/metrics/addresses/receiving_from_exchanges_count",
+                       params=params,
+                       as_text=True)
 
-plot_transfer_count(exchange_in, exchange_out, 'Exchange address transfer', 'Exchange address count')
+    plot_transfer_count(exchange_in, exchange_out, 'Exchange address transfer', 'Exchange address count')
 
 tvol_params = copy.copy(params)
 tvol_params['c'] = 'USD'
@@ -107,7 +108,7 @@ transfer_volume = call("https://api.glassnode.com/v1/metrics/transactions/transf
 
 tvol_df = pd.read_csv(StringIO(transfer_volume))
 
-plot_series(tvol_df, 'Transfer volume (USD)')
+plot_series(tvol_df, 'Transfer volume (USD)', True)
 
 
 num_candles = int((end - start).total_seconds() / 3600 / (24 if resolution == '24h' else 1))
