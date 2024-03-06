@@ -7,6 +7,49 @@ from io import StringIO
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+import ccxt
+
+
+def init_session():
+    st.session_state.db = st.connection("postgresql", type="sql")
+
+    st.session_state.kucoin = ccxt.kucoin({
+        'adjustForTimeDifference': True,
+        "apiKey": st.secrets.KUCOIN_API_KEY,
+        "secret": st.secrets.KUCOIN_API_SECRET,
+        'password': st.secrets.PASSWORD,
+    })
+
+    st.session_state.binance = ccxt.binance({
+        'apiKey': st.secrets.BINANCE_API_KEY,
+        'secret': st.secrets.BINANCE_API_SECRET,
+        'enableRateLimit': True,
+        'options': {
+            'defaultType': 'spot',
+        },
+    })
+
+    st.session_state.okx = ccxt.okx({
+        'apiKey': st.secrets.OKX_API_KEY,
+        'secret': st.secrets.OKX_API_SECRET,
+        'enableRateLimit': True
+    })
+
+    st.session_state.kucoin.load_markets()
+    st.session_state.binance.load_markets()
+    st.session_state.okx.load_markets()
+
+    st.session_state.ku_markets = list(
+        set(map(lambda symbol: symbol.split('/')[0],
+                filter(lambda symbol: 'USDT' in symbol, kucoin.symbols))))
+
+    st.session_state.binance_markets = list(
+        set(map(lambda symbol: symbol.split('/')[0],
+                filter(lambda symbol: 'USDT' in symbol, binance.symbols))))
+
+    st.session_state.okx_markets = list(
+        set(map(lambda symbol: symbol.split('/')[0],
+                filter(lambda symbol: 'USDT' in symbol, okx.symbols))))
 
 
 def call(method, params=None, as_text=False):
