@@ -41,15 +41,15 @@ def init_session():
 
     st.session_state.ku_markets = list(
         set(map(lambda symbol: symbol.split('/')[0],
-                filter(lambda symbol: 'USDT' in symbol, kucoin.symbols))))
+                filter(lambda symbol: 'USDT' in symbol, st.session_state.kucoin.symbols))))
 
     st.session_state.binance_markets = list(
         set(map(lambda symbol: symbol.split('/')[0],
-                filter(lambda symbol: 'USDT' in symbol, binance.symbols))))
+                filter(lambda symbol: 'USDT' in symbol, st.session_state.binance.symbols))))
 
     st.session_state.okx_markets = list(
         set(map(lambda symbol: symbol.split('/')[0],
-                filter(lambda symbol: 'USDT' in symbol, okx.symbols))))
+                filter(lambda symbol: 'USDT' in symbol, st.session_state.okx.symbols))))
 
 
 def call(method, params=None, as_text=False):
@@ -76,7 +76,6 @@ def get_field_filtered_list(name, tag, collection):
 
 def get_field_set(name, collection):
     return sorted(list(map(lambda item: item[name], collection)))
-
 
 @st.cache_data
 def load_pump_data(_conn):
@@ -158,6 +157,15 @@ def annotate_symbol(symbol, pump, ku_symbols, bi_symbols, okx_symbols):
             f'{"O" if symbol in okx_symbols else ""})')
 
 
+def assign_name(item):
+    item['name'] = item['path'].split('/')[-1]
+    return item
+
 @st.cache_data
 def get_all_metrics():
-    return call("https://api.glassnode.com/v2/metrics/endpoints")
+    return list(map(assign_name, call("https://api.glassnode.com/v2/metrics/endpoints")))
+
+
+def metric_names():
+    metrics = get_all_metrics()
+    return get_field_list('metric', metrics)
