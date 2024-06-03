@@ -1,0 +1,38 @@
+#+title: Crypto Club Slides
+#+options: toc:nil
+
+* Aim
+
+Validate the usability of GlassNode Data to find market trends.
+
+* Approach
+
+Find causality between GlassNode metrics and Crypto currency price evolution.
+
+
+* Tool
+
+Metrics Explorer
+Combines in a single dashboard Crypto market prices and metrics from GlassNode.
+
+
+* Current status
+
+Active development
+
+* Technologies
+
+Python
+Streamlit
+
+* Pros
+
+Single place to look at causal relationships between different GlassNode metrics and Crypto market prices.
+
+* Cons
+
+GlassNode only focuses on the top 3 assets
+Not much on ERC20s or DeFi.
+Most metrics only offer 1 day or 1 hour resolution.
+Exchange data can be aggregated with more flexibility.
+
