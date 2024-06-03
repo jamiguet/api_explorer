@@ -1,11 +1,9 @@
-import copy
 import datetime
 import pandas as pd
 import streamlit as st
-from util import call, plot_transfer_count, load_pump_data, get_field_set, get_field_filtered_list, to_unix, \
+from util import call, load_pump_data, get_field_set, get_field_filtered_list, to_unix, \
     plot_candles, plot_series, annotate_symbol, get_all_metrics
 from io import StringIO
-import ccxt
 from ccxt.kucoin import BadSymbol
 from functools import reduce
 import plotly.express as px
@@ -23,8 +21,7 @@ metrics_list.sort(key=lambda item: item['path'])
 supported_coins = [asset['symbol'] for asset in reduce(lambda acc, val: acc + val['assets'], metrics_list, [])]
 
 filtered_assets = get_field_filtered_list('symbol', tag, assets)
-filtered_assets = list(filter(lambda symbol: (
-                                                     symbol in st.session_state.ku_markets or symbol in st.session_state.binance_markets) and symbol in st.session_state.supported_coins,
+filtered_assets = list(filter(lambda symbol: (symbol in st.session_state.ku_markets or symbol in st.session_state.binance_markets) and symbol in st.session_state.supported_coins,
                               filtered_assets))
 filtered_assets = list(
     map(lambda symbol: annotate_symbol(symbol, pumped_coins, st.session_state.ku_markets,
